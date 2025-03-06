@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Интернет-магазин</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="product-card">
+            <img src="image/1.jpg" class="product-image" alt="Товар 1">
+            <h3>Помадка</h3>
+            <p>Цена: ₽ <span class="price">100</span></p>
+            <input type="number" class="quantity-input" value="1" min="1">
+            <button class="add-to-cart" onclick="addToCart(this)">В корзину</button>
+        </div>
+
+        <div class="product-card">
+            <img src="image/2.jpg" class="product-image" alt="Товар 2">
+            <h3>Корзинка</h3>
+            <p>Цена: ₽ <span class="price">150</span></p>
+            <input type="number" class="quantity-input" value="1" min="1">
+            <button class="add-to-cart" onclick="addToCart(this)">В корзину</button>
+        </div>
+    </div>
+
+    <!-- Кнопка для открытия корзины -->
+    <button id="open-cart-button" class="cart-button">Корзина</button>
+
+    <!-- Всплывающее окно корзины -->
+    <div id="cart-modal" class="modal">
+        <div class="modal-content">
+            <span id="close-cart-button" class="close">&times;</span>
+            <h3>Корзина</h3>
+            <div id="cart-items"></div>
+            <hr>
+            <p>Итого: ₽ <span id="total">0</span></p>
+            <button id="checkout-button" class="add-to-cart">Оформить заказ</button>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
