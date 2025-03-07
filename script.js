@@ -1,5 +1,6 @@
 const tg = window.Telegram.WebApp;
 
+/* Закоментировал, так как товар добавляется через python
 // Массив с данными товаров
 const products = [
     {
@@ -38,6 +39,7 @@ function renderProducts() {
         container.insertAdjacentHTML('beforeend', productCard);
     });
 }
+*/
 
 // Логика корзины
 let cartItems = [];
@@ -130,5 +132,7 @@ tg.MainButton.onClick(() => {
     tg.close();
 });
 
+/* Закоментировал, так как товар добавляется через python
 // Отрисовка товаров при загрузке страницы
 document.addEventListener('DOMContentLoaded', renderProducts);
+*/
