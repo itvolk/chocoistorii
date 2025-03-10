@@ -13,7 +13,7 @@ for folder_name in os.listdir(products_dir):
     # Проверяем, что это папка
     if os.path.isdir(folder_path):
         product_name = folder_name
-        image_path = os.path.join(folder_path, 'image.jpg')
+        image_path = os.path.join(folder_path, '*.jpg')
         price_path = os.path.join(folder_path, 'price.txt')
         description_path = os.path.join(folder_path, 'description.txt')
 
