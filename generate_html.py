@@ -60,14 +60,16 @@ html_content = '''
 
 # Добавляем информацию о каждом товаре
 for product in products:
-    html_content += f'''
+    html_content += f"""
     <div class="product">
-        <img src="{product[\'image\']}" alt="{product[\'name\']}">
-        <h2>{product[\'name\']}</h2>
-        <p><strong>Цена:</strong> {product[\'price\']}</p>
+        <div class="images">
+            {"".join(f'<img src="{image}" alt="{product["name"]}">' for image in product['images'])}
+        </div>
+        <h2>{product['name']}</h2>
+        <p><strong>Цена:</strong> {product['price']}</p>
         <button class="add-to-cart" onclick="addToCart(this)">В корзину</button>
     </div>
-    '''
+    """
 
 # Завершаем HTML-код
 html_content += '''
