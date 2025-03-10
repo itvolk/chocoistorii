@@ -56,31 +56,21 @@ html_content = '''
 </head>
 <body>
     <!-- Закоментированный код для добавления товаров через JS -->
-    <!-- <div class="container"></div> <!-- Контейнер для карточек товаров -->
-    
-'''
+    <!-- <div class="container"></div> <!-- Контейнер для карточек товаров -->'''
 
 # Добавляем информацию о каждом товаре
 for product in products:
     html_content += f'''
-    <div class="product-card">
-        <div class="images">
-    '''
-    # Добавляем все изображения товара
-    for image in product['images']:
-        html_content += f'<img src="{image}" alt="{product["name"]}">'
-
-    html_content += f'''
-        </div>
-        <h3>{product['name']}</h3>
-        <p><strong>Цена: ₽ </strong> {product['price']}</p>
+    <div class="product">
+        <img src="{product['image']}" alt="{product['name']}">
+        <h2>{product['name']}</h2>
+        <p><strong>Цена:</strong> {product['price']}</p>
         <button class="add-to-cart" onclick="addToCart(this)">В корзину</button>
     </div>
     '''
 
 # Завершаем HTML-код
 html_content += '''
-
     <!-- Кнопка для открытия корзины -->
     <button id="open-cart-button" class="cart-button">Корзина</button>
 
@@ -98,8 +88,7 @@ html_content += '''
 
     <script src="script.js"></script>
 </body>
-</html>
-'''
+</html>'''
 
 # Сохраняем HTML-файл
 with open('index.html', 'w', encoding='utf-8') as file:
