@@ -1,3 +1,4 @@
+ # -*- coding: utf-8 -*-
 import os
 
 # Указываем путь к папке с товарами
@@ -13,7 +14,6 @@ for folder_name in os.listdir(products_dir):
     # Проверяем, что это папка
     if os.path.isdir(folder_path):
         product_name = folder_name
-        image_path = os.path.join(folder_path, '*.jpg')
         price_path = os.path.join(folder_path, 'price.txt')
         description_path = os.path.join(folder_path, 'description.txt')
 
@@ -29,10 +29,16 @@ for folder_name in os.listdir(products_dir):
             with open(description_path, 'r', encoding='utf-8') as file:
                 description = file.read().strip()
 
+        # Собираем все изображения из папки
+        images = []
+        for file_name in os.listdir(folder_path):
+            if file_name.startswith('image') and file_name.endswith('.jpg'):
+                images.append(os.path.join(folder_path, file_name))
+
         # Добавляем товар в список
         products.append({
             'name': product_name,
-            'image': image_path,
+            'images': images,
             'price': price,
             'description': description
         })
@@ -58,9 +64,16 @@ html_content = '''
 for product in products:
     html_content += f'''
     <div class="product-card">
-        <img src="{product['image']}" class="product-image" alt="{product['name']}">
+        <div class="images">
+    '''
+    # Добавляем все изображения товара
+    for image in product['images']:
+        html_content += f'<img src="{image}" alt="{product["name"]}">'
+
+    html_content += f'''
+        </div>
         <h3>{product['name']}</h3>
-        <p>Цена: ₽ <span class="price"> {product['price']}</p>
+        <p><strong>Цена: ₽ </strong> {product['price']}</p>
         <button class="add-to-cart" onclick="addToCart(this)">В корзину</button>
     </div>
     '''
