@@ -1,7 +1,7 @@
 import os
 
 # Указываем путь к папке с товарами
-products_dir = 'products/'
+products_dir = 'image/'
 
 # Создаем список для хранения данных о товарах
 products = []
