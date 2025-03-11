@@ -136,3 +136,56 @@ tg.MainButton.onClick(() => {
 // Отрисовка товаров при загрузке страницы
 document.addEventListener('DOMContentLoaded', renderProducts);
 */
+
+// Открытие формы оформления заказа
+document.getElementById('checkout-button').addEventListener('click', () => {
+    document.getElementById('cart-modal').style.display = 'none';
+    document.getElementById('checkout-modal').style.display = 'flex';
+
+    // Автозаполнение данных из Telegram
+    const user = tg.initDataUnsafe.user;
+    if (user) {
+        document.getElementById('name').value = user.first_name || '';
+        document.getElementById('phone').value = user.phone_number || '';
+    }
+});
+
+// Закрытие формы оформления заказа
+document.getElementById('close-checkout-button').addEventListener('click', () => {
+    document.getElementById('checkout-modal').style.display = 'none';
+});
+
+// Отправка формы
+document.getElementById('checkout-form').addEventListener('submit', (event) => {
+    event.preventDefault();
+
+    const name = document.getElementById('name').value;
+    const phone = document.getElementById('phone').value;
+
+    // Формируем сообщение для отправки
+    let message = `Новый заказ!\n\n`;
+    message += `Имя: ${name}\n`;
+    message += `Телефон: ${phone}\n\n`;
+    message += `Товары:\n`;
+
+    cartItems.forEach(item => {
+        message += `${item.name} - ${item.quantity} x ₽${item.price}\n`;
+    });
+
+    message += `\nИтого: ₽${cartItems.reduce((total, item) => total + item.price * item.quantity, 0).toFixed(2)}`;
+
+    // Отправляем данные в Telegram
+    tg.sendData(JSON.stringify({
+        message: message,
+        cartItems: cartItems,
+        name: name,
+        phone: phone
+    }));
+
+    // Закрываем форму
+    document.getElementById('checkout-modal').style.display = 'none';
+
+    // Очищаем корзину
+    cartItems = [];
+    updateCartUI();
+});

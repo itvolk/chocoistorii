@@ -32,7 +32,7 @@ for folder_name in os.listdir(products_dir):
         # Собираем все изображения из папки
         images = []
         for file_name in os.listdir(folder_path):
-            if file_name.startswith('image') and file_name.endswith('.jpg'):
+            if file_name.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
                 images.append(os.path.join(folder_path, file_name))
 
         # Добавляем товар в список
@@ -55,24 +55,22 @@ html_content = '''
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-    <!-- Закоментированный код для добавления товаров через JS -->
-    <!-- <div class="container"></div> <!-- Контейнер для карточек товаров -->'''
+    <div class="container"> <!-- Контейнер для карточек товаров -->'''
 
 # Добавляем информацию о каждом товаре
 for product in products:
-    html_content += f"""
-    <div class="product">
-        <div class="images">
-            {"".join(f'<img src="{image}" alt="{product["name"]}">' for image in product['images'])}
-        </div>
-        <h2>{product['name']}</h2>
-        <p><strong>Цена:</strong> {product['price']}</p>
+    html_content += f'''
+    <div class="product-card">
+        {"".join(f'<img src="{image}" class="product-image" alt="{product["name"]}">' for image in product['images'])}
+        <h3>{product['name']}</h3>
+        <p>Цена: <span class="price"> {product['price']}</span> ₽</p>
         <button class="add-to-cart" onclick="addToCart(this)">В корзину</button>
     </div>
-    """
+    '''
 
 # Завершаем HTML-код
 html_content += '''
+    </div>
     <!-- Кнопка для открытия корзины -->
     <button id="open-cart-button" class="cart-button">Корзина</button>
 
@@ -83,12 +81,26 @@ html_content += '''
             <h3>Корзина</h3>
             <div id="cart-items"></div>
             <hr>
-            <p>Итого: ₽ <span id="total">0</span></p>
+            <p>Итого: <span id="total">0</span> ₽</p>
             <button id="checkout-button" class="add-to-cart">Оформить заказ</button>
         </div>
     </div>
 
     <script src="script.js"></script>
+<!-- Форма ввода данных -->
+    <div id="checkout-modal" class="modal">
+        <div class="modal-content">
+            <span id="close-checkout-button" class="close">&times;</span>
+            <h3>Оформление заказа</h3>
+            <form id="checkout-form">
+                <label for="name">Имя:</label>
+                <input type="text" id="name" name="name" required>
+                <label for="phone">Телефон:</label>
+                <input type="tel" id="phone" name="phone" required>
+                <button type="submit" class="add-to-cart">Отправить заказ</button>
+            </form>
+        </div>
+    </div>
 </body>
 </html>'''
 
