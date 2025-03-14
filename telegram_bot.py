@@ -1,11 +1,20 @@
 import subprocess
+import logging
+import json
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters
 
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-ADMIN_USER_ID = int(os.getenv("ADMIN_USER_ID"))
+# Настройка логгера
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
 
-
+# Конфигурация
+TELEGRAM_BOT_TOKEN = "1472315449:AAEvo2GQrDVOk4jdzStFFKOFNxWqZuIfiR8"
+ADMIN_USER_ID = 450271995
+ORDER_CHAT_ID = 450271995  # Замените на ID группы или пользователя, куда отправлять заказы
 
 # Обработчик команды /update
 async def update_products(update: Update, context):
@@ -24,7 +33,6 @@ async def update_products(update: Update, context):
     except Exception as e:
         await update.message.reply_text(f"Произошла ошибка: {str(e)}")
 
-
 # Обработчик данных из веб-приложения
 async def handle_web_app_data(update: Update, context):
     data = update.message.web_app_data.data
@@ -35,20 +43,32 @@ async def handle_web_app_data(update: Update, context):
     name = data['name']
     phone = data['phone']
 
-    # Отправляем сообщение с данными заказа
-    await update.message.reply_text(message)
+    # Формируем сообщение о заказе
+    order_message = f"Новый заказ!\n\nИмя: {name}\nТелефон: {phone}\n\nСообщение:\n{message}\n\nТовары:\n"
+    for item in cart_items:
+        order_message += f"{item['name']} - {item['quantity']} x ₽{item['price']}\n"
 
-    # Можно также отправить фото товаров, если они есть
+    # Отправляем сообщение в указанную группу или пользователю
+    await context.bot.send_message(chat_id=ORDER_CHAT_ID, text=order_message)
+
+    # Отправляем фото товаров, если они есть
     for item in cart_items:
         if item['images']:
             for image in item['images']:
                 with open(image, 'rb') as photo:
-                    await update.message.reply_photo(photo, caption=f"{item['name']} - {item['quantity']} x ₽{item['price']}")
+                    await context.bot.send_photo(chat_id=ORDER_CHAT_ID, photo=photo, caption=f"{item['name']} - {item['quantity']} x ₽{item['price']}")
 
 # Функция, которая выполняется при запуске бота
-async def on_startup(application):
-    print("Бот запущен. Обновляю страницу с товарами...")
-    await run_generate_html()
+async def on_startup():
+    logger.info("Бот запущен. Обновляю страницу с товарами...")
+    try:
+        result = subprocess.run(["python", "generate_html.py"], capture_output=True, text=True)
+        if result.returncode == 0:
+            logger.info("Страница с товарами успешно обновлена!")
+        else:
+            logger.error(f"Ошибка при обновлении страницы:\n{result.stderr}")
+    except Exception as e:
+        logger.error(f"Произошла ошибка: {str(e)}")
 
 # Создаем приложение и добавляем обработчики
 app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
@@ -56,5 +76,8 @@ app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
 app.add_handler(CommandHandler("update", update_products))
 app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
 
-# Запускаем бота и добавляем хук для выполнения кода при запуске бота
-app.run_polling(on_startup=on_startup)
+# Запускаем бота
+if __name__ == '__main__':
+    # Выполняем код при запуске
+    on_startup()
+    app.run_polling()

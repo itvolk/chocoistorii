@@ -83,7 +83,7 @@ function updateCartUI() {
         itemElement.className = 'cart-item';
         itemElement.innerHTML = `
             <span>${item.name}</span>
-            <span>${item.quantity} x ₽ ${item.price}</span>
+            <span>${item.quantity} x ${item.price} ₽</span>
             <button class="remove-item" onclick="removeFromCart(${index})">×</button>
         `;
         cartItemsContainer.appendChild(itemElement);
