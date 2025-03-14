@@ -4,8 +4,8 @@ import json
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import WebAppInfo, Message
-from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.enums import ParseMode
+from aiogram.client.default import DefaultBotProperties  # Импортируем DefaultBotProperties
 
 # Настройка логгера
 logging.basicConfig(
@@ -24,8 +24,10 @@ ADMIN_USER_ID = 450271995
 ORDER_CHAT_ID = 450271995  # Замените на ID группы или пользователя, куда отправлять заказы
 
 # Инициализация бота и диспетчера
-bot = Bot(token=TELEGRAM_BOT_TOKEN, parse_mode=ParseMode.HTML)
-dp = Dispatcher()
+bot = Bot(
+    token=TELEGRAM_BOT_TOKEN,
+    default=DefaultBotProperties(parse_mode=ParseMode.HTML)  # Указываем parse_mode через DefaultBotProperties
+dp = Dispatcher(bot=bot)  # Передаем бота в Dispatcher
 
 # Обработчик команды /update
 @dp.message(Command("update"))
@@ -94,7 +96,7 @@ async def on_startup():
 # Запуск бота
 async def main():
     await on_startup()  # Выполняем код при запуске
-    await dp.start_polling(bot)
+    await dp.start_polling()
 
 if __name__ == '__main__':
     import asyncio
