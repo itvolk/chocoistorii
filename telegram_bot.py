@@ -27,6 +27,7 @@ ORDER_CHAT_ID = 450271995  # Замените на ID группы или пол
 bot = Bot(
     token=TELEGRAM_BOT_TOKEN,
     default=DefaultBotProperties(parse_mode=ParseMode.HTML)  # Указываем parse_mode через DefaultBotProperties
+)  # Закрывающая скобка добавлена здесь
 dp = Dispatcher(bot=bot)  # Передаем бота в Dispatcher
 
 # Обработчик команды /update
