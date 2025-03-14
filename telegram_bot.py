@@ -35,28 +35,36 @@ async def update_products(update: Update, context):
 
 # Обработчик данных из веб-приложения
 async def handle_web_app_data(update: Update, context):
-    data = update.message.web_app_data.data
-    data = json.loads(data)
+    try:
+        data = json.loads(update.message.web_app_data.data)
+        logger.info(f"Получены данные: {data}")
 
-    message = data['message']
-    cart_items = data['cart_items']
-    name = data['name']
-    phone = data['phone']
+        # Проверяем наличие обязательных полей
+        if 'cart_items' not in data or 'name' not in data or 'phone' not in data:
+            await update.message.reply_text("Ошибка: некорректные данные заказа.")
+            return
 
-    # Формируем сообщение о заказе
-    order_message = f"Новый заказ!\n\nИмя: {name}\nТелефон: {phone}\n\nСообщение:\n{message}\n\nТовары:\n"
-    for item in cart_items:
-        order_message += f"{item['name']} - {item['quantity']} x ₽{item['price']}\n"
+        cart_items = data['cart_items']
+        name = data['name']
+        phone = data['phone']
 
-    # Отправляем сообщение в указанную группу или пользователю
-    await context.bot.send_message(chat_id=ORDER_CHAT_ID, text=order_message)
+        # Формируем сообщение о заказе
+        order_message = f"Новый заказ!\n\nИмя: {name}\nТелефон: {phone}\n\nТовары:\n"
+        for item in cart_items:
+            order_message += f"{item['name']} - {item['quantity']} x ₽{item['price']}\n"
 
-    # Отправляем фото товаров, если они есть
-    for item in cart_items:
-        if item['images']:
-            for image in item['images']:
-                with open(image, 'rb') as photo:
-                    await context.bot.send_photo(chat_id=ORDER_CHAT_ID, photo=photo, caption=f"{item['name']} - {item['quantity']} x ₽{item['price']}")
+        # Отправляем сообщение в указанную группу или пользователю
+        await context.bot.send_message(chat_id=ORDER_CHAT_ID, text=order_message)
+
+        # Отправляем фото товаров, если они есть
+        for item in cart_items:
+            if 'images' in item and item['images']:
+                for image in item['images']:
+                    with open(image, 'rb') as photo:
+                        await context.bot.send_photo(chat_id=ORDER_CHAT_ID, photo=photo, caption=f"{item['name']} - {item['quantity']} x ₽{item['price']}")
+    except Exception as e:
+        logger.error(f"Ошибка при обработке данных: {e}")
+        await update.message.reply_text("Произошла ошибка при обработке заказа.")
 
 # Функция, которая выполняется при запуске бота
 async def on_startup():
