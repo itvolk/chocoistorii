@@ -27,8 +27,8 @@ ORDER_CHAT_ID = 450271995  # Замените на ID группы или пол
 bot = Bot(
     token=TELEGRAM_BOT_TOKEN,
     default=DefaultBotProperties(parse_mode=ParseMode.HTML)  # Указываем parse_mode через DefaultBotProperties
-)  # Закрывающая скобка добавлена здесь
-dp = Dispatcher(bot=bot)  # Передаем бота в Dispatcher
+)
+dp = Dispatcher()  # Создаем Dispatcher без передачи бота
 
 # Обработчик команды /update
 @dp.message(Command("update"))
@@ -97,7 +97,7 @@ async def on_startup():
 # Запуск бота
 async def main():
     await on_startup()  # Выполняем код при запуске
-    await dp.start_polling()
+    await dp.start_polling(bot)  # Передаем бота в start_polling
 
 if __name__ == '__main__':
     import asyncio
