@@ -8,6 +8,10 @@ from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, fil
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.FileHandler("/app/logs/bot.log"),  # Логи сохраняются в /app/logs/bot.log
+        logging.StreamHandler()  # Логи также выводятся в консоль
+    ]
 )
 logger = logging.getLogger(__name__)
 
@@ -37,7 +41,7 @@ async def update_products(update: Update, context):
 async def handle_web_app_data(update: Update, context):
     try:
         data = json.loads(update.message.web_app_data.data)
-        logger.info(f"Получены данные: {data}")
+        logger.info(f"Получены данные: {data}")  # Логируем данные
 
         # Проверяем наличие обязательных полей
         if 'cart_items' not in data or 'name' not in data or 'phone' not in data:
@@ -67,7 +71,7 @@ async def handle_web_app_data(update: Update, context):
         await update.message.reply_text("Произошла ошибка при обработке заказа.")
 
 # Функция, которая выполняется при запуске бота
-async def on_startup():
+async def on_startup(application):
     logger.info("Бот запущен. Обновляю страницу с товарами...")
     try:
         result = subprocess.run(["python", "generate_html.py"], capture_output=True, text=True)
@@ -79,13 +83,11 @@ async def on_startup():
         logger.error(f"Произошла ошибка: {str(e)}")
 
 # Создаем приложение и добавляем обработчики
-app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
+app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).post_init(on_startup).build()
 
 app.add_handler(CommandHandler("update", update_products))
 app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
 
 # Запускаем бота
 if __name__ == '__main__':
-    # Выполняем код при запуске
-    on_startup()
     app.run_polling()
