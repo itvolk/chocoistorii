@@ -52,15 +52,18 @@ async def update_products(message: types.Message):
 @dp.message(lambda message: message.web_app_data is not None)
 async def handle_web_app_data(message: types.Message):
     try:
+        # Логируем данные из веб-приложения
+        logger.info(f"Получены данные из веб-приложения: {message.web_app_data.data}")
+
+        # Парсим данные
         data = json.loads(message.web_app_data.data)
-        logger.info(f"Получены данные: {data}")  # Логируем данные
 
         # Проверяем наличие обязательных полей
-        if 'cart_items' not in data or 'name' not in data or 'phone' not in data:
+        if 'cartItems' not in data or 'name' not in data or 'phone' not in data:
             await message.reply("Ошибка: некорректные данные заказа.")
             return
 
-        cart_items = data['cart_items']
+        cart_items = data['cartItems']  # Обратите внимание на ключ 'cartItems'
         name = data['name']
         phone = data['phone']
 
@@ -78,6 +81,9 @@ async def handle_web_app_data(message: types.Message):
                 for image in item['images']:
                     with open(image, 'rb') as photo:
                         await bot.send_photo(chat_id=ORDER_CHAT_ID, photo=photo, caption=f"{item['name']} - {item['quantity']} x ₽{item['price']}")
+    except json.JSONDecodeError:
+        logger.error("Ошибка при декодировании JSON данных из веб-приложения.")
+        await message.reply("Ошибка: данные из веб-приложения имеют неверный формат.")
     except Exception as e:
         logger.error(f"Ошибка при обработке данных: {e}")
         await message.reply("Произошла ошибка при обработке заказа.")
