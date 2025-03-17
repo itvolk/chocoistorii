@@ -2,14 +2,13 @@ import subprocess
 import logging
 import json
 import sys
+import asyncio
+import signal
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
-from aiogram.types import WebAppInfo, Message
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
 from aiogram.client.session.aiohttp import AiohttpSession
-import asyncio
-import signal
 
 # Настройка логгера
 logging.basicConfig(
@@ -38,7 +37,7 @@ bot = Bot(
     token=TELEGRAM_BOT_TOKEN,
     session=session,
     default=DefaultBotProperties(parse_mode=ParseMode.HTML)
-dp = Dispatcher()
+dp = Dispatcher(bot=bot)  # Исправлено: передаем бота в Dispatcher
 
 # Обработчик команды /update
 @dp.message(Command("update"))
