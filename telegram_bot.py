@@ -14,6 +14,8 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
 
+router = Router()
+
 # Настройка логгера
 logging.basicConfig(
     level=logging.INFO,
