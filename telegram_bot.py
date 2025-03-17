@@ -27,11 +27,7 @@ ADMIN_USER_ID = 450271995
 ORDER_CHAT_ID = 450271995
 
 # Инициализация бота с кастомной сессией
-session = AiohttpSession(
-    read_timeout=30,
-    write_timeout=30,
-    connect_timeout=30,
-)
+session = AiohttpSession()  # Убраны параметры таймаутов
 
 bot = Bot(
     token=TELEGRAM_BOT_TOKEN,
