@@ -30,15 +30,15 @@ async def on_startup() -> None:
     # Устанавливаем командное меню
     await set_commands()
     # Устанавливаем вебхук для приема сообщений через заданный URL
-    await bot.set_webhook(f"{BASE_URL}{WEBHOOK_PATH}")
+    await bot.set_webhook(f"{WEBHOOK_URL}{WEBHOOK_PATH}")
     # Отправляем сообщение администратору о том, что бот был запущен
-    await bot.send_message(chat_id=ADMIN_ID, text='Бот запущен!')
+    await bot.send_message(chat_id=ADMIN_USER_ID, text='Бот запущен!')
 
 
 # Функция, которая будет вызвана при остановке бота
 async def on_shutdown() -> None:
     # Отправляем сообщение администратору о том, что бот был остановлен
-    await bot.send_message(chat_id=ADMIN_ID, text='Бот остановлен!')
+    await bot.send_message(chat_id=ADMIN_USER_ID, text='Бот остановлен!')
     # Удаляем вебхук и, при необходимости, очищаем ожидающие обновления
     await bot.delete_webhook(drop_pending_updates=True)
     # Закрываем сессию бота, освобождая ресурсы
