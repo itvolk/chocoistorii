@@ -126,8 +126,8 @@ async def main():
     try:
         await bot.delete_webhook()
         await on_startup()
-        #await dp.start_polling(bot)
-        await dp.start_polling(bot, skip_updates=True, timeout=30, relax=1)  # Передаем бота в start_polling
+        await dp.start_polling(bot)
+        #await dp.start_polling(bot, skip_updates=True, timeout=30, relax=1)  # Передаем бота в start_polling
     except Exception as e:
         logger.error(f"Critical error: {e}")
     finally:
@@ -135,3 +135,4 @@ async def main():
 
 if __name__ == '__main__':
     asyncio.run(main())
+
