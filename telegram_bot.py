@@ -6,6 +6,7 @@ from aiogram.filters import Command
 from aiogram.types import WebAppInfo, Message
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
+import asyncio
 
 # Настройка логгера
 logging.basicConfig(
