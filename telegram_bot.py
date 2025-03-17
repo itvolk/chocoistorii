@@ -37,7 +37,10 @@ bot = Bot(
     token=TELEGRAM_BOT_TOKEN,
     session=session,
     default=DefaultBotProperties(parse_mode=ParseMode.HTML)
-dp = Dispatcher(bot=bot)  # Исправлено: передаем бота в Dispatcher
+)
+
+# Создаем Dispatcher без передачи бота
+dp = Dispatcher()
 
 # Обработчик команды /update
 @dp.message(Command("update"))
@@ -147,7 +150,7 @@ async def main():
         await bot.delete_webhook()
         await on_startup()
         await dp.start_polling(
-            bot,
+            bot,  # Передаем бота в start_polling
             skip_updates=True,
             close_bot_session=True,
             allowed_updates=dp.resolve_used_update_types()
