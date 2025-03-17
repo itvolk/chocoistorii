@@ -112,7 +112,7 @@ async def on_startup():
     
     try:
         me = await bot.get_me()
-        logger.success(f"Bot @{me.username} initialized successfully!")
+        logger.info(f"Bot @{me.username} initialized successfully!")  # Исправлено: используем logger.info
     except Exception as e:
         logger.critical(f"Bot auth failed: {e}")
         raise
