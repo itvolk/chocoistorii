@@ -1,46 +1,5 @@
 const tg = window.Telegram.WebApp;
 
-/* Закоментировал, так как товар добавляется через python
-// Массив с данными товаров
-const products = [
-    {
-        id: 1,
-        name: "Помада",
-        price: 150,
-        image: "image/1.jpg",
-    },
-    {
-        id: 2,
-        name: "Корзинка",
-        price: 700,
-        image: "image/2.jpg",
-    },
-];
-
-// Функция для создания карточки товара
-function createProductCard(product) {
-    return `
-        <div class="product-card">
-            <img src="${product.image}" class="product-image" alt="${product.name}">
-            <h3>${product.name}</h3>
-            <p>Цена: ₽ <span class="price">${product.price}</span></p>
-            <button class="add-to-cart" onclick="addToCart(this)">В корзину</button>
-        </div>
-    `;
-}
-
-// Функция для отрисовки всех товаров
-function renderProducts() {
-    const container = document.querySelector('.container');
-    container.innerHTML = ''; // Очищаем контейнер перед добавлением новых карточек
-
-    products.forEach(product => {
-        const productCard = createProductCard(product);
-        container.insertAdjacentHTML('beforeend', productCard);
-    });
-}
-*/
-
 // Логика корзины
 let cartItems = [];
 
@@ -125,6 +84,7 @@ window.addEventListener('click', (event) => {
 // Оформление заказа
 document.getElementById('checkout-button').addEventListener('click', sendCartData);
 
+
 // Инициализация Telegram Web App
 tg.MainButton.show();
 tg.MainButton.setText("Закрыть");
@@ -132,10 +92,6 @@ tg.MainButton.onClick(() => {
     tg.close();
 });
 
-/* Закоментировал, так как товар добавляется через python
-// Отрисовка товаров при загрузке страницы
-document.addEventListener('DOMContentLoaded', renderProducts);
-*/
 
 // Открытие формы оформления заказа
 document.getElementById('checkout-button').addEventListener('click', () => {
@@ -150,10 +106,12 @@ document.getElementById('checkout-button').addEventListener('click', () => {
     }
 });
 
+
 // Закрытие формы оформления заказа
 document.getElementById('close-checkout-button').addEventListener('click', () => {
     document.getElementById('checkout-modal').style.display = 'none';
 });
+
 
 // Отправка формы
 document.getElementById('checkout-form').addEventListener('submit', (event) => {

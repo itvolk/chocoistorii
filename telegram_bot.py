@@ -1,20 +1,23 @@
 import subprocess
 import logging
 import json
+import sys
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import WebAppInfo, Message
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
+from aiogram.client.session.aiohttp import AiohttpSession
 import asyncio
+import signal
 
 # Настройка логгера
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.FileHandler("/app/logs/bot.log"),  # Логи сохраняются в /app/logs/bot.log
-        logging.StreamHandler()  # Логи также выводятся в консоль
+        logging.FileHandler("/app/logs/bot.log"),
+        logging.StreamHandler()
     ]
 )
 logger = logging.getLogger(__name__)
@@ -22,24 +25,28 @@ logger = logging.getLogger(__name__)
 # Конфигурация
 TELEGRAM_BOT_TOKEN = "1472315449:AAEvo2GQrDVOk4jdzStFFKOFNxWqZuIfiR8"
 ADMIN_USER_ID = 450271995
-ORDER_CHAT_ID = 450271995  # Замените на ID группы или пользователя, куда отправлять заказы
+ORDER_CHAT_ID = 450271995
 
-# Инициализация бота и диспетчера
+# Инициализация бота с кастомной сессией
+session = AiohttpSession(
+    read_timeout=30,
+    write_timeout=30,
+    connect_timeout=30,
+)
+
 bot = Bot(
     token=TELEGRAM_BOT_TOKEN,
-    default=DefaultBotProperties(parse_mode=ParseMode.HTML)  # Указываем parse_mode через DefaultBotProperties
-)
-dp = Dispatcher()  # Создаем Dispatcher без передачи бота
+    session=session,
+    default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+dp = Dispatcher()
 
 # Обработчик команды /update
 @dp.message(Command("update"))
 async def update_products(message: types.Message):
-    # Проверяем, является ли пользователь администратором
     if message.from_user.id != ADMIN_USER_ID:
         await message.reply("У вас нет прав для выполнения этой команды.")
         return
 
-    # Остальная логика команды
     try:
         result = subprocess.run(["python", "generate_html.py"], capture_output=True, text=True)
         if result.returncode == 0:
@@ -53,13 +60,9 @@ async def update_products(message: types.Message):
 @dp.message(lambda message: message.web_app_data is not None)
 async def handle_web_app_data(message: types.Message):
     try:
-        # Логируем данные из веб-приложения
         logger.info(f"Получены данные из веб-приложения: {message.web_app_data.data}")
-
-        # Парсим данные
         data = json.loads(message.web_app_data.data)
 
-        # Проверяем наличие обязательных полей и их значений
         if not isinstance(data, dict):
             await message.reply("Ошибка: данные должны быть в формате JSON.")
             return
@@ -76,19 +79,15 @@ async def handle_web_app_data(message: types.Message):
         name = data['name']
         phone = data['phone']
 
-        # Формируем сообщение о заказе
         order_message = f"Новый заказ!\n\nИмя: {name}\nТелефон: {phone}\n\nТовары:\n"
         for item in cart_items:
             order_message += f"{item['name']} - {item['quantity']} x ₽{item['price']}\n"
 
-        # Добавляем итоговую сумму
         total = sum(item['price'] * item['quantity'] for item in cart_items)
         order_message += f"\nИтого: ₽{total:.2f}"
 
-        # Отправляем сообщение в указанную группу или пользователю
         await bot.send_message(chat_id=ORDER_CHAT_ID, text=order_message)
 
-        # Отправляем фото товаров, если они есть
         for item in cart_items:
             if 'images' in item and item['images']:
                 for image in item['images']:
@@ -99,7 +98,6 @@ async def handle_web_app_data(message: types.Message):
                         logger.error(f"Ошибка при отправке изображения: {e}")
                         await bot.send_message(chat_id=ORDER_CHAT_ID, text=f"Не удалось отправить изображение для товара: {item['name']}")
 
-        # Подтверждаем пользователю, что заказ успешно обработан
         await message.reply("Ваш заказ успешно оформлен! Спасибо за покупку.")
 
     except json.JSONDecodeError:
@@ -111,7 +109,16 @@ async def handle_web_app_data(message: types.Message):
 
 # Функция, которая выполняется при запуске бота
 async def on_startup():
-    logger.info("Бот запущен. Обновляю страницу с товарами...")
+    logger.info("Starting bot initialization...")
+    logger.debug(f"Python version: {sys.version}")
+    
+    try:
+        me = await bot.get_me()
+        logger.success(f"Bot @{me.username} initialized successfully!")
+    except Exception as e:
+        logger.critical(f"Bot auth failed: {e}")
+        raise
+
     try:
         result = subprocess.run(["python", "generate_html.py"], capture_output=True, text=True)
         if result.returncode == 0:
@@ -121,16 +128,40 @@ async def on_startup():
     except Exception as e:
         logger.error(f"Произошла ошибка: {str(e)}")
 
+# Обработчик сигналов для graceful shutdown
+def handle_shutdown(signum, frame):
+    logger.info("Received shutdown signal. Stopping bot...")
+    asyncio.create_task(shutdown())
+
+async def shutdown():
+    await bot.session.close()
+    logger.info("Bot session closed properly")
+    sys.exit(0)
+
 # Запуск бота
 async def main():
     try:
-        await bot.delete_webhook()  # Убедимся, что вебхуки отключены
+        # Регистрируем обработчики сигналов
+        signal.signal(signal.SIGINT, handle_shutdown)
+        signal.signal(signal.SIGTERM, handle_shutdown)
+
+        await bot.delete_webhook()
         await on_startup()
-        await dp.start_polling(bot, skip_updates=True)  # Пропускаем старые обновления
+        await dp.start_polling(
+            bot,
+            skip_updates=True,
+            close_bot_session=True,
+            allowed_updates=dp.resolve_used_update_types()
+        )
     except Exception as e:
         logger.error(f"Critical error: {e}")
     finally:
-        await bot.session.close()
+        await shutdown()
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("Bot stopped by user")
+    except Exception as e:
+        logger.critical(f"Unexpected error: {e}")
