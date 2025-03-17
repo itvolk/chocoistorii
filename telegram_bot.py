@@ -194,7 +194,7 @@ async def main():
     setup_application(app, dp, bot=bot)
 
     # Запускаем веб-сервер на указанном хосте и порте (из интернета)
-    web.run_app(app, host=HOST, port=PORT)
+    web.run_app(app, host=WEB_SERVER_HOST, port=WEB_SERVER_PORT)
 
     # # Запуск веб-сервера
     # runner = web.AppRunner(app)
