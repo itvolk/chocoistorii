@@ -47,7 +47,7 @@ async def on_shutdown() -> None:
 
 
 
-    
+
 
 # Настройка логгера
 logging.basicConfig(
@@ -193,14 +193,24 @@ async def main():
     webhook_requests_handler.register(app, path=WEBHOOK_PATH)
     setup_application(app, dp, bot=bot)
 
-    # Запускаем веб-сервер на указанном хосте и порте (из интернета)
-    web.run_app(app, host=WEB_SERVER_HOST, port=WEB_SERVER_PORT)
+    # # Запускаем веб-сервер на указанном хосте и порте (из интернета)
+    # web.run_app(app, host=WEB_SERVER_HOST, port=WEB_SERVER_PORT)
+    # Подключаем маршрутизатор (роутер) для обработки сообщений
+    dp.include_router(router)
 
-    # # Запуск веб-сервера
-    # runner = web.AppRunner(app)
-    # await runner.setup()
-    # site = web.TCPSite(runner, WEB_SERVER_HOST, WEB_SERVER_PORT)
-    # await site.start()
+    # Регистрируем функцию, которая будет вызвана при старте бота
+    dp.startup.register(on_startup)
+
+    # Регистрируем функцию, которая будет вызвана при остановке бота
+    dp.shutdown.register(on_shutdown)
+
+
+
+    # Запуск веб-сервера
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, WEB_SERVER_HOST, WEB_SERVER_PORT)
+    await site.start()
 
     # # Установка вебхука
     # await on_startup(bot)
