@@ -8,6 +8,7 @@ import json
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram import Router
+from aiogram.types import Message
 from aiogram.filters import CommandStart
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
