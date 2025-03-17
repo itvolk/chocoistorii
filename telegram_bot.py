@@ -5,7 +5,7 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import WebAppInfo, Message
 from aiogram.enums import ParseMode
-from aiogram.client.default import DefaultBotProperties  # Импортируем DefaultBotProperties
+from aiogram.client.default import DefaultBotProperties
 
 # Настройка логгера
 logging.basicConfig(
@@ -58,12 +58,20 @@ async def handle_web_app_data(message: types.Message):
         # Парсим данные
         data = json.loads(message.web_app_data.data)
 
-        # Проверяем наличие обязательных полей
-        if 'cartItems' not in data or 'name' not in data or 'phone' not in data:
-            await message.reply("Ошибка: некорректные данные заказа.")
+        # Проверяем наличие обязательных полей и их значений
+        if not isinstance(data, dict):
+            await message.reply("Ошибка: данные должны быть в формате JSON.")
             return
 
-        cart_items = data['cartItems']  # Обратите внимание на ключ 'cartItems'
+        if 'cartItems' not in data or 'name' not in data or 'phone' not in data:
+            await message.reply("Ошибка: некорректные данные заказа. Отсутствуют обязательные поля.")
+            return
+
+        if not data['name'] or not data['phone']:
+            await message.reply("Ошибка: имя или телефон не указаны.")
+            return
+
+        cart_items = data['cartItems']
         name = data['name']
         phone = data['phone']
 
@@ -72,6 +80,10 @@ async def handle_web_app_data(message: types.Message):
         for item in cart_items:
             order_message += f"{item['name']} - {item['quantity']} x ₽{item['price']}\n"
 
+        # Добавляем итоговую сумму
+        total = sum(item['price'] * item['quantity'] for item in cart_items)
+        order_message += f"\nИтого: ₽{total:.2f}"
+
         # Отправляем сообщение в указанную группу или пользователю
         await bot.send_message(chat_id=ORDER_CHAT_ID, text=order_message)
 
@@ -79,14 +91,22 @@ async def handle_web_app_data(message: types.Message):
         for item in cart_items:
             if 'images' in item and item['images']:
                 for image in item['images']:
-                    with open(image, 'rb') as photo:
-                        await bot.send_photo(chat_id=ORDER_CHAT_ID, photo=photo, caption=f"{item['name']} - {item['quantity']} x ₽{item['price']}")
+                    try:
+                        with open(image, 'rb') as photo:
+                            await bot.send_photo(chat_id=ORDER_CHAT_ID, photo=photo, caption=f"{item['name']} - {item['quantity']} x ₽{item['price']}")
+                    except Exception as e:
+                        logger.error(f"Ошибка при отправке изображения: {e}")
+                        await bot.send_message(chat_id=ORDER_CHAT_ID, text=f"Не удалось отправить изображение для товара: {item['name']}")
+
+        # Подтверждаем пользователю, что заказ успешно обработан
+        await message.reply("Ваш заказ успешно оформлен! Спасибо за покупку.")
+
     except json.JSONDecodeError:
         logger.error("Ошибка при декодировании JSON данных из веб-приложения.")
         await message.reply("Ошибка: данные из веб-приложения имеют неверный формат.")
     except Exception as e:
         logger.error(f"Ошибка при обработке данных: {e}")
-        await message.reply("Произошла ошибка при обработке заказа.")
+        await message.reply("Произошла ошибка при обработке заказа. Пожалуйста, попробуйте еще раз.")
 
 # Функция, которая выполняется при запуске бота
 async def on_startup():
@@ -103,7 +123,8 @@ async def on_startup():
 # Запуск бота
 async def main():
     await on_startup()  # Выполняем код при запуске
-    await dp.start_polling(bot)  # Передаем бота в start_polling
+ #   await dp.start_polling(bot)  # Передаем бота в start_polling
+    await dp.start_polling(bot, skip_updates=True, timeout=30, relax=1)  # Передаем бота в start_polling
 
 if __name__ == '__main__':
     import asyncio
