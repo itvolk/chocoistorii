@@ -7,6 +7,7 @@ import signal
 import json
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
+from aiogram.filters import CommandStart
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
@@ -50,6 +51,11 @@ bot = Bot(
 
 # Инициализация диспетчера
 dp = Dispatcher()  # Исправлено: создаем Dispatcher без передачи бота
+
+# функция для реагирования на команду /start
+@router.message(CommandStart())
+async def command_start_handler(message: Message) -> None:
+    await message.answer(f"Привет, <b>{message.from_user.full_name}</b>! Как дела?")
 
 # Обработчик команды /update
 @dp.message(Command("update"))
