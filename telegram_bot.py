@@ -176,25 +176,45 @@ def handle_signal(signum, frame):
     logger.info(f"Received signal {signum}")
     asyncio.create_task(shutdown())
 
-# Основная функция
-async def main():
-    singleton()  # Проверка дублирующих запусков
+# # Основная функция
+# async def main():
+#     singleton()  # Проверка дублирующих запусков
     
-    # Регистрация обработчиков сигналов
-    signal.signal(signal.SIGINT, handle_signal)
-    signal.signal(signal.SIGTERM, handle_signal)
+#     # Регистрация обработчиков сигналов
+#     signal.signal(signal.SIGINT, handle_signal)
+#     signal.signal(signal.SIGTERM, handle_signal)
 
-    # Настройка веб-сервера
-    app = web.Application()
-    webhook_requests_handler = SimpleRequestHandler(
-        dispatcher=dp,
-        bot=bot,
-    )
-    webhook_requests_handler.register(app, path=WEBHOOK_PATH)
-    setup_application(app, dp, bot=bot)
+#     # Настройка веб-сервера
+#     app = web.Application()
+#     webhook_requests_handler = SimpleRequestHandler(
+#         dispatcher=dp,
+#         bot=bot,
+#     )
+#     webhook_requests_handler.register(app, path=WEBHOOK_PATH)
+#     setup_application(app, dp, bot=bot)
 
-    # # Запускаем веб-сервер на указанном хосте и порте (из интернета)
-    # web.run_app(app, host=WEB_SERVER_HOST, port=WEB_SERVER_PORT)
+#     # Запуск веб-сервера
+#     runner = web.AppRunner(app)
+#     await runner.setup()
+#     site = web.TCPSite(runner, WEB_SERVER_HOST, WEB_SERVER_PORT)
+#     await site.start()
+
+#     # # Установка вебхука
+#     await on_startup(bot)
+
+#     logger.info(f"Bot started on {WEB_SERVER_HOST}:{WEB_SERVER_PORT}")
+#     await asyncio.Event().wait()  # Бесконечное ожидание
+
+# if __name__ == '__main__':
+#     try:
+#         asyncio.run(main())
+#     except KeyboardInterrupt:
+#         logger.info("Bot stopped by user")
+#     except Exception as e:
+#         logger.critical(f"Unexpected error: {e}")
+
+# Основная функция, которая запускает приложение
+def main() -> None:
     # Подключаем маршрутизатор (роутер) для обработки сообщений
     dp.include_router(router)
 
@@ -204,24 +224,27 @@ async def main():
     # Регистрируем функцию, которая будет вызвана при остановке бота
     dp.shutdown.register(on_shutdown)
 
+    # Создаем веб-приложение на базе aiohttp
+    app = web.Application()
+
+    # Настраиваем обработчик запросов для работы с вебхуком
+    webhook_requests_handler = SimpleRequestHandler(
+        dispatcher=dp,  # Передаем диспетчер
+        bot=bot  # Передаем объект бота
+    )
+    # Регистрируем обработчик запросов на определенном пути
+    webhook_requests_handler.register(app, path=WEBHOOK_PATH)
+
+    # Настраиваем приложение и связываем его с диспетчером и ботом
+    setup_application(app, dp, bot=bot)
+
+    # Запускаем веб-сервер на указанном хосте и порте
+    web.run_app(app, host=WEB_SERVER_HOST, port=WEB_SERVER_PORT)
 
 
-    # Запуск веб-сервера
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, WEB_SERVER_HOST, WEB_SERVER_PORT)
-    await site.start()
-
-    # # Установка вебхука
-    # await on_startup(bot)
-
-    logger.info(f"Bot started on {WEB_SERVER_HOST}:{WEB_SERVER_PORT}")
-    await asyncio.Event().wait()  # Бесконечное ожидание
-
-if __name__ == '__main__':
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        logger.info("Bot stopped by user")
-    except Exception as e:
-        logger.critical(f"Unexpected error: {e}")
+# Точка входа в программу
+if __name__ == "__main__":
+    # Настраиваем логирование (информация, предупреждения, ошибки) и выводим их в консоль
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logger = logging.getLogger(__name__)  # Создаем логгер для использования в других частях программы
+    main()  # Запускаем основную функцию
