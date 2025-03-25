@@ -1,111 +1,104 @@
- # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 import os
+from html import escape
 
-# Указываем путь к папке с товарами
-products_dir = 'image/'
-
-# Создаем список для хранения данных о товарах
-products = []
-
-# Проходим по каждой папке в директории
-for folder_name in os.listdir(products_dir):
-    folder_path = os.path.join(products_dir, folder_name)
+def generate_html():
+    products_dir = 'products/'
+    products = []
     
-    # Проверяем, что это папка
-    if os.path.isdir(folder_path):
-        product_name = folder_name
-        price_path = os.path.join(folder_path, 'price.txt')
-        description_path = os.path.join(folder_path, 'description.txt')
+    for folder in os.listdir(products_dir):
+        folder_path = os.path.join(products_dir, folder)
+        if os.path.isdir(folder_path):
+            product = {
+                'name': escape(folder),
+                'price': '0',
+                'description': '',
+                'images': []
+            }
+            
+            # Чтение price.txt
+            price_path = os.path.join(folder_path, 'price.txt')
+            if os.path.exists(price_path):
+                with open(price_path, 'r') as f:
+                    product['price'] = f.read().strip()
+            
+            # Чтение description.txt
+            desc_path = os.path.join(folder_path, 'description.txt')
+            if os.path.exists(desc_path):
+                with open(desc_path, 'r', encoding='utf-8') as f:
+                    product['description'] = escape(f.read().strip())
+            
+            # Поиск изображений
+            images_dir = os.path.join(folder_path, 'images')
+            if os.path.isdir(images_dir):
+                product['images'] = [
+                    os.path.relpath(os.path.join(images_dir, f)) 
+                    for f in os.listdir(images_dir) 
+                    if f.lower().endswith(('.png', '.jpg', '.jpeg'))
+                ]
+            
+            products.append(product)
 
-        # Читаем цену и описание из файлов
-        price = 'Цена не указана'
-        description = 'Описание отсутствует'
-
-        if os.path.exists(price_path):
-            with open(price_path, 'r', encoding='utf-8') as file:
-                price = file.read().strip()
-
-        if os.path.exists(description_path):
-            with open(description_path, 'r', encoding='utf-8') as file:
-                description = file.read().strip()
-
-        # Собираем все изображения из папки
-        images = []
-        for file_name in os.listdir(folder_path):
-            if file_name.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
-                images.append(os.path.join(folder_path, file_name))
-
-        # Добавляем товар в список
-        products.append({
-            'name': product_name,
-            'images': images,
-            'price': price,
-            'description': description
-        })
-
-# Создаем HTML-код
-html_content = '''
-<!DOCTYPE html>
+    # Генерация HTML
+    html = f'''<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Интернет-магазин</title>
+    <title>Магазин шоколада</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-    <div class="container"> <!-- Контейнер для карточек товаров -->'''
+    <div class="container">'''
 
-# Добавляем информацию о каждом товаре
-for product in products:
-    html_content += f'''
-    <div class="product-card">
-        {"".join(f'<img src="{image}" class="product-image" alt="{product["name"]}">' for image in product['images'])}
-        <h3>{product['name']}</h3>
-        <p>Цена: <span class="price"> {product['price']}</span> ₽</p>
-        <button class="add-to-cart" onclick="addToCart(this)">В корзину</button>
+    for product in products:
+        html += f'''
+        <div class="product-card" data-name="{product['name']}" data-price="{product['price']}">
+            <div class="gallery">
+                {"".join(f'<img src="{img}" class="product-image" loading="lazy" alt="{product["name"]}">' for img in product['images'])}
+            </div>
+            <h3>{product['name']}</h3>
+            <p class="price">{product['price']} ₽</p>
+            <button class="add-to-cart" onclick="addToCart(this)">В корзину</button>
+        </div>'''
+
+    html += '''
     </div>
-    '''
-
-# Завершаем HTML-код
-html_content += '''
-    </div>
-    <!-- Кнопка для открытия корзины -->
-    <button id="open-cart-button" class="cart-button">Корзина</button>
-
-    <!-- Модальное окно корзины -->
+    <!-- Модальные окна -->
     <div id="cart-modal" class="modal">
         <div class="modal-content">
             <span id="close-cart-button" class="close">&times;</span>
-            <h3>Корзина</h3>
+            <h3>Ваша корзина</h3>
             <div id="cart-items"></div>
-            <hr>
-            <p>Итого: <span id="total">0</span> ₽</p>
-            <button id="checkout-button" class="add-to-cart">Оформить заказ</button>
+            <div class="total">Итого: <span id="total">0</span> ₽</div>
+            <button id="checkout-button" class="Button">Оформить заказ</button>
         </div>
     </div>
 
-    <script src="script.js"></script>
-<!-- Форма ввода данных -->
     <div id="checkout-modal" class="modal">
         <div class="modal-content">
-            <span id="close-checkout-button" class="close">&times;</span>
+            <button id="close-checkout-button" class="close">&times;</button>
             <h3>Оформление заказа</h3>
             <form id="checkout-form">
-                <label for="name">Имя:</label>
-                <input type="text" id="name" name="name" required>
-                <label for="phone">Телефон:</label>
-                <input type="tel" id="phone" name="phone" required>
-                <button type="submit" class="add-to-cart">Отправить заказ</button>
+                <input type="text" id="name" placeholder="Имя" required>
+                <input type="tel" id="phone" placeholder="Телефон" required>
+                <button type="submit" class="Button">Отправить заказ</button>
             </form>
         </div>
     </div>
+
+    <button id="open-cart-button" class="cart-button">
+        🛒 Корзина
+        <span id="cart-counter" class="counter"></span>
+    </button>
+    <script src="script.js"></script>
 </body>
 </html>'''
 
-# Сохраняем HTML-файл
-with open('index.html', 'w', encoding='utf-8') as file:
-    file.write(html_content)
+    with open('index.html', 'w', encoding='utf-8') as f:
+        f.write(html)
+    print("HTML-страница успешно создана!")
 
-print("HTML-страница успешно создана!")
+if __name__ == "__main__":
+    generate_html()

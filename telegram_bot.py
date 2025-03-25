@@ -2,14 +2,25 @@ import logging
 import os
 import subprocess
 import json
-from aiogram.types import BotCommand, BotCommandScopeDefault, KeyboardButton, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
+from datetime import datetime
+from aiogram.types import (
+    BotCommand, 
+    BotCommandScopeDefault, 
+    KeyboardButton, 
+    ReplyKeyboardMarkup, 
+    InlineKeyboardMarkup, 
+    InlineKeyboardButton,
+    Chat,
+    User,
+    Message,
+    InputMediaPhoto
+)
 from aiohttp import web
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiogram import Bot, Dispatcher, Router, F
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode, ContentType
 from aiogram.filters import CommandStart, Command
-from aiogram.types import Message
 import asyncio
 from aiogram.utils.web_app import check_webapp_signature
 from dotenv import load_dotenv
@@ -56,15 +67,14 @@ except ValueError as e:
     logger.error(f"Ошибка загрузки конфигурации: {e}")
     raise
 
-
-
-# Инициализация бота
+# Инициализация бота и диспетчера
 bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher()
 router = Router()
+dp.include_router(router)
 
 # Создаем клавиатуру с кнопкой для веб-приложения
-async def get_main_keyboard():
+async def get_main_keyboard(bot: Bot):
     bot_info = await bot.get_me()
     return ReplyKeyboardMarkup(
         keyboard=[
@@ -79,13 +89,12 @@ async def get_main_keyboard():
 
 # Обработчики сообщений
 @router.message(CommandStart())
-async def command_start_handler(message: Message) -> None:
+async def command_start_handler(message: Message):
     bot_info = await bot.get_me()
     
     if message.chat.type == "private":
-        # Личный чат
         await message.answer(
-            f"Привет! Добро пожаловать в магазин! \n Для открытия магазина, нажмите кнопку внизу 👇",
+            f"Привет! Добро пожаловать в магазин! \nДля открытия магазина, нажмите кнопку внизу 👇",
             reply_markup=ReplyKeyboardMarkup(
                 keyboard=[
                     [KeyboardButton(text="🛍️ Открыть магазин", web_app={'url': BASE_URL})]
@@ -94,7 +103,6 @@ async def command_start_handler(message: Message) -> None:
             )
         )
     else:
-        # Группа
         await message.answer(
             "Для работы с магазином перейдите в личный чат с ботом:",
             reply_markup=InlineKeyboardMarkup(
@@ -110,7 +118,7 @@ async def command_start_handler(message: Message) -> None:
         )
 
 @router.message(Command("update"))
-async def update_products(message: Message) -> None:
+async def update_products(message: Message):
     if message.from_user.id != ADMIN_ID:
         await message.answer("У вас нет прав для выполнения этой команды.")
         return
@@ -136,7 +144,6 @@ async def shop_handler(message: Message):
     bot_info = await bot.get_me()
     
     if message.chat.type == "private":
-        # Личный чат - показываем WebApp кнопку
         await message.answer(
             "Откройте магазин:",
             reply_markup=ReplyKeyboardMarkup(
@@ -147,7 +154,6 @@ async def shop_handler(message: Message):
             )
         )
     else:
-        # Группа - предлагаем перейти в личный чат
         await message.answer(
             "Магазин доступен в личном чате с ботом:",
             reply_markup=InlineKeyboardMarkup(
@@ -163,39 +169,26 @@ async def shop_handler(message: Message):
         )
 
 @router.message(F.content_type == ContentType.WEB_APP_DATA)
-async def handle_web_app_data(message: Message) -> None:
+async def handle_web_app_data(message: Message):
     logger.info(f"Raw web_app_data received: {message.web_app_data}")
     
     try:
-        # Логируем сырые данные для диагностики
-        logger.info(f"WebApp data content: {message.web_app_data.data}")
-        
-        # Пытаемся распарсить данные
-        try:
-            data = json.loads(message.web_app_data.data)
-            logger.info(f"Parsed data: {data}")
-        except json.JSONDecodeError as e:
-            logger.error(f"JSON decode error: {e}")
-            await message.answer("❌ Ошибка в формате данных заказа")
-            return
+        data = json.loads(message.web_app_data.data)
+        logger.info(f"Parsed data: {data}")
 
-        # Валидация обязательных полей
         required_fields = ['cart_items', 'name', 'phone']
         if not all(field in data for field in required_fields):
             missing = [f for f in required_fields if f not in data]
-            logger.error(f"Missing required fields: {missing}")
             await message.answer(f"❌ Отсутствуют обязательные поля: {', '.join(missing)}")
             return
 
-        # Валидация корзины
         if not isinstance(data['cart_items'], list) or len(data['cart_items']) == 0:
-            logger.error("Empty or invalid cart items")
             await message.answer("❌ Корзина пуста или содержит ошибки")
             return
 
-        # Подготовка данных заказа
         order_lines = []
         total = 0.0
+        photo_urls = []
         
         for item in data['cart_items']:
             try:
@@ -204,6 +197,9 @@ async def handle_web_app_data(message: Message) -> None:
                 quantity = int(item['quantity'])
                 total += price * quantity
                 order_lines.append(f"• {name} × {quantity} - {price:.2f}₽")
+                
+                if 'photo_url' in item and item['photo_url']:
+                    photo_urls.append(item['photo_url'])
             except (KeyError, ValueError) as e:
                 logger.error(f"Invalid item format: {item}, error: {e}")
                 continue
@@ -212,40 +208,30 @@ async def handle_web_app_data(message: Message) -> None:
             await message.answer("❌ Нет валидных товаров в заказе")
             return
 
-        # Формирование сообщения
         order_text = (
             f"🛍️ Новый заказ от {data['name']} ({data['phone']})\n"
-            "Состав:\n" + 
-            "\n".join(order_lines) +
+            "Состав:\n" + "\n".join(order_lines) +
             f"\n\n💳 Итого: {total:.2f}₽"
         )
 
-        # Отправка админу
-        await bot.send_message(
-            chat_id=ORDER_CHAT_ID,
-            text=order_text,
-            parse_mode=ParseMode.HTML
-        )
+        if photo_urls:
+            media_group = [
+                InputMediaPhoto(media=url, caption=order_text if i == 0 else None)
+                for i, url in enumerate(photo_urls[:10])  # Ограничиваем 10 фото
+            ]
+            await bot.send_media_group(chat_id=ORDER_CHAT_ID, media=media_group)
+        else:
+            await bot.send_message(
+                chat_id=ORDER_CHAT_ID,
+                text=order_text,
+                parse_mode=ParseMode.HTML
+            )
         
-        # Ответ пользователю
         await message.answer("✅ Заказ успешно принят! Скоро с вами свяжутся.")
 
     except Exception as e:
         logger.error(f"Unexpected error: {str(e)}", exc_info=True)
-        await message.answer("❌ Произошла непредвиденная ошибка при обработке заказа")
-
-# Обработчик для HTTP fallback
-@router.message(F.web_app_data.is_not(None))
-async def handle_http_fallback(message: Message):
-    logger.info(f"Fallback data: {message.web_app_data}")
-    await handle_web_app_data(message)
-
-# временный обработчик для всех входящих сообщений:
-@router.message()
-async def catch_all(message: Message):
-    logger.info(f"Caught message: {message.model_dump_json()}")
-    logger.info(f"Content type: {message.content_type}")
-
+        await message.answer("❌ Произошла ошибка при обработке заказа")
 
 async def set_commands():
     commands = [
@@ -255,42 +241,43 @@ async def set_commands():
     ]
     await bot.set_my_commands(commands, BotCommandScopeDefault())
 
-# Управление вебхуком
-async def on_startup() -> None:
+async def on_startup():
     try:
         await bot.delete_webhook()
         await asyncio.sleep(1)
-        logger.info("Запуск on_startup...")
         await set_commands()
-        result = await bot.set_webhook(
-            url=f"{BASE_URL}{WEBHOOK_PATH}",
-            allowed_updates=["message", "web_app_data"]  # Важно!
-        )
-        logger.info(f"Ответ setwebhook: {result}")
+        
+        # Отправляем тестовое сообщение о запуске
         await bot.send_message(ADMIN_ID, "🤖 Бот запущен!")
+        
+        # Устанавливаем вебхук
+        await bot.set_webhook(
+            url=f"{BASE_URL}{WEBHOOK_PATH}",
+            allowed_updates=["message", "web_app_data"]
+        )
     except Exception as e:
         logger.error(f"Ошибка в on_startup: {e}")
         raise
 
-async def on_shutdown() -> None:
+async def on_shutdown():
     await bot.send_message(ADMIN_ID, "🔴 Бот остановлен!")
     await bot.delete_webhook(drop_pending_updates=True)
-    await bot.session.close()
+    await (await bot.get_session()).close()
 
-# Health check endpoint
 async def health_check(request):
     return web.Response(text="OK")
 
-# Конфигурация приложения
 def main():
-    dp.include_router(router)
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)
 
     app = web.Application()
     app.router.add_get("/", health_check)
     
-    webhook_requests_handler = SimpleRequestHandler(dispatcher=dp, bot=bot)
+    webhook_requests_handler = SimpleRequestHandler(
+        dispatcher=dp,
+        bot=bot
+    )
     app.router.add_post(WEBHOOK_PATH, webhook_requests_handler)
     
     setup_application(app, dp, bot=bot)

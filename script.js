@@ -1,149 +1,260 @@
-const tg = window.Telegram.WebApp;
+// Инициализация Telegram WebApp
+const tg = window.Telegram?.WebApp;
+let cartItems = JSON.parse(localStorage.getItem('cart')) || [];
 
-// Логика корзины
-let cartItems = [];
+// Логирование инициализационных данных
+console.log('Telegram WebApp init:', {
+  version: tg?.version,
+  platform: tg?.platform,
+  initData: tg?.initData,
+  initDataUnsafe: tg?.initDataUnsafe
+});
 
-function addToCart(button) {
-    const productCard = button.closest('.product-card');
-    const product = {
-        name: productCard.querySelector('h3').innerText,
-        price: parseFloat(productCard.querySelector('.price').innerText),
-        quantity: 1
-    };
+// Безопасное получение элементов
+const getElement = (id) => {
+  const element = document.getElementById(id);
+  if (!element) console.error(`Element #${id} not found!`);
+  return element;
+};
 
-    const existingItem = cartItems.find(item => item.name === product.name);
-    if (existingItem) {
-        existingItem.quantity += product.quantity;
-    } else {
-        cartItems.push(product);
+// Элементы интерфейса
+const elements = {
+  cartModal: getElement('cart-modal'),
+  checkoutModal: getElement('checkout-modal'),
+  cartItems: getElement('cart-items'),
+  totalElement: getElement('total'),
+  nameInput: getElement('name'),
+  phoneInput: getElement('phone'),
+  openCartButton: getElement('open-cart-button'),
+  closeCartButton: getElement('close-cart-button'),
+  checkoutButton: getElement('checkout-button'),
+  closeCheckoutButton: getElement('close-checkout-button'),
+  checkoutForm: getElement('checkout-form')
+};
+
+// Глобальные функции для inline обработчиков
+window.addToCart = function(button) {
+  const productCard = button.closest('.product-card');
+  if (!productCard) return;
+
+  const priceElement = productCard.querySelector('.price');
+  const nameElement = productCard.querySelector('h3');
+  // Изменено: теперь ищем первое изображение в галерее
+  const photoElement = productCard.querySelector('.gallery img');
+  
+  if (!priceElement || !nameElement) {
+    console.error('Product card structure incorrect');
+    return;
+  }
+
+  const product = {
+    name: nameElement.textContent.trim(),
+    price: parseFloat(priceElement.textContent.replace(/[^\d.]/g, '')),
+    quantity: 1,
+    // Используем абсолютный URL для фото
+    photo_url: photoElement ? new URL(photoElement.src, window.location.href).href : null
+  };
+
+  if (!product.name || isNaN(product.price)) {
+    console.error('Invalid product data:', product);
+    return;
+  }
+
+  console.log('Adding product to cart:', product); // Логирование для отладки
+
+  const existingItem = cartItems.find(item => item.name === product.name);
+  if (existingItem) {
+    existingItem.quantity++;
+    // Обновляем фото, если оно изменилось
+    if (product.photo_url) {
+      existingItem.photo_url = product.photo_url;
     }
+  } else {
+    cartItems.push(product);
+  }
+  updateCart();
+};
 
-    updateCartUI();
-}
+window.changeQuantity = function(index, delta) {
+  if (!cartItems[index]) return;
+  cartItems[index].quantity = Math.max(1, cartItems[index].quantity + delta);
+  updateCart();
+};
 
-function removeFromCart(index) {
+window.removeFromCart = function(index) {
+  if (index >= 0 && index < cartItems.length) {
     cartItems.splice(index, 1);
-    updateCartUI();
+    updateCart();
+  }
+};
+
+// Обновление кнопки корзины
+function updateCartButton() {
+  if (elements.openCartButton) {
+    elements.openCartButton.classList.toggle('has-items', cartItems.length > 0);
+  }
 }
 
-function updateCartUI() {
-    const cartItemsContainer = document.getElementById('cart-items');
-    const totalElement = document.getElementById('total');
-    const cartButton = document.getElementById('open-cart-button');
-    let total = 0;
+// Обновление корзины
+function updateCart() {
+  localStorage.setItem('cart', JSON.stringify(cartItems));
+  renderCart();
+  updateCartButton();
+}
 
-    cartItemsContainer.innerHTML = '';
-    
-    cartItems.forEach((item, index) => {
-        const itemTotal = item.price * item.quantity;
-        total += itemTotal;
+// Отрисовка корзины
+function renderCart() {
+  if (!elements.cartItems || !elements.totalElement) return;
 
-        const itemElement = document.createElement('div');
-        itemElement.className = 'cart-item';
-        itemElement.innerHTML = `
-            <span>${item.name}</span>
-            <span>${item.quantity} x ${item.price} ₽</span>
-            <button class="remove-item" onclick="removeFromCart(${index})">×</button>
-        `;
-        cartItemsContainer.appendChild(itemElement);
-    });
+  elements.cartItems.innerHTML = '';
+  let total = 0;
 
-    totalElement.textContent = total.toFixed(2);
+  cartItems.forEach((item, index) => {
+    if (!item?.name || isNaN(item.price) || isNaN(item.quantity)) {
+      console.warn('Invalid item removed:', item);
+      cartItems.splice(index, 1);
+      return;
+    }
 
-    // Обновляем стиль кнопки корзины
-    if (cartItems.length > 0) {
-        cartButton.classList.add('has-items');
+    const itemHTML = `
+      <div class="cart-item">
+        <span>${item.name}</span>
+        <div class="item-controls">
+          <button onclick="changeQuantity(${index}, -1)">-</button>
+          <span>${item.quantity}</span>
+          <button onclick="changeQuantity(${index}, 1)">+</button>
+          <button class="remove" onclick="removeFromCart(${index})">×</button>
+        </div>
+        <span class="price">${(item.price * item.quantity).toFixed(2)} ₽</span>
+      </div>
+    `;
+    elements.cartItems.insertAdjacentHTML('beforeend', itemHTML);
+    total += item.price * item.quantity;
+  });
+
+  elements.totalElement.textContent = total.toFixed(2);
+}
+
+// Управление модальными окнами
+function openCart() {
+  if (elements.cartModal) elements.cartModal.style.display = 'flex';
+}
+
+function closeModals() {
+  if (elements.cartModal) elements.cartModal.style.display = 'none';
+  if (elements.checkoutModal) elements.checkoutModal.style.display = 'none';
+}
+
+// Функция для показа уведомлений
+function showAlert(message) {
+  try {
+    tg?.showAlert?.(message) || alert(message);
+  } catch (e) {
+    alert(message);
+  }
+}
+
+// Обработчик отправки формы
+function handleSubmit(e) {
+  e.preventDefault();
+  
+  if (cartItems.length === 0) {
+    showAlert('🛒 Корзина пуста!');
+    return;
+  }
+
+  const name = elements.nameInput?.value.trim() || '';
+  const phone = elements.phoneInput?.value.trim() || '';
+  
+  if (!name) {
+    showAlert('✏️ Введите ваше имя!');
+    return;
+  }
+  
+  if (!phone) {
+    showAlert('📱 Введите номер телефона!');
+    return;
+  }
+
+  const orderData = {
+    cart_items: cartItems.map(item => ({
+      name: item.name,
+      price: item.price,
+      quantity: item.quantity,
+      photo_url: item.photo_url || null
+    })),
+    name: name,
+    phone: phone,
+    init_data: tg?.initDataUnsafe
+  };
+
+  console.log('Submitting order:', orderData);
+
+  try {
+    if (window.Telegram?.WebApp?.sendData) {
+      Telegram.WebApp.sendData(JSON.stringify(orderData));
+      showAlert('✅ Заказ успешно отправлен!');
+      
+      cartItems = [];
+      localStorage.removeItem('cart');
+      updateCart();
+      closeModals();
+      
+      if (Telegram.WebApp.close) {
+        setTimeout(() => Telegram.WebApp.close(), 1000);
+      }
     } else {
-        cartButton.classList.remove('has-items');
+      showAlert('✅ Заказ принят! Мы свяжемся с вами в ближайшее время.');
+      console.log('Order data (for fallback):', orderData);
+      
+      cartItems = [];
+      localStorage.removeItem('cart');
+      updateCart();
+      closeModals();
     }
+  } catch (error) {
+    console.error('Order submission error:', error);
+    showAlert('❌ Ошибка при отправке заказа');
+  }
 }
 
-function sendCartData() {
-    const cartData = JSON.stringify(cartItems);
-    tg.sendData(cartData);
-}
-
-// Открытие корзины
-document.getElementById('open-cart-button').addEventListener('click', () => {
-    document.getElementById('cart-modal').style.display = 'flex';
-});
-
-// Закрытие корзины
-document.getElementById('close-cart-button').addEventListener('click', () => {
-    document.getElementById('cart-modal').style.display = 'none';
-});
-
-// Закрытие корзины при клике вне окна
-window.addEventListener('click', (event) => {
-    const modal = document.getElementById('cart-modal');
-    if (event.target === modal) {
-        modal.style.display = 'none';
-    }
-});
-
-// Оформление заказа
-document.getElementById('checkout-button').addEventListener('click', sendCartData);
-
-
-// Инициализация Telegram Web App
-tg.MainButton.show();
-tg.MainButton.setText("Закрыть");
-tg.MainButton.onClick(() => {
-    tg.close();
-});
-
-
-// Открытие формы оформления заказа
-document.getElementById('checkout-button').addEventListener('click', () => {
-    document.getElementById('cart-modal').style.display = 'none';
-    document.getElementById('checkout-modal').style.display = 'flex';
-
-    // Автозаполнение данных из Telegram
-    const user = tg.initDataUnsafe.user;
-    if (user) {
-        document.getElementById('name').value = user.first_name || '';
-        document.getElementById('phone').value = user.phone_number || '';
-    }
-});
-
-
-// Закрытие формы оформления заказа
-document.getElementById('close-checkout-button').addEventListener('click', () => {
-    document.getElementById('checkout-modal').style.display = 'none';
-});
-
-
-// Отправка формы
-document.getElementById('checkout-form').addEventListener('submit', (event) => {
-    event.preventDefault();
-
-    const name = document.getElementById('name').value;
-    const phone = document.getElementById('phone').value;
-
-    // Формируем сообщение для отправки
-    let message = `Новый заказ!\n\n`;
-    message += `Имя: ${name}\n`;
-    message += `Телефон: ${phone}\n\n`;
-    message += `Товары:\n`;
-
-    cartItems.forEach(item => {
-        message += `${item.name} - ${item.quantity} x ₽${item.price}\n`;
+// Инициализация приложения
+document.addEventListener('DOMContentLoaded', () => {
+  // Привязка событий
+  if (elements.openCartButton) {
+    elements.openCartButton.addEventListener('click', openCart);
+  }
+  
+  if (elements.closeCartButton) {
+    elements.closeCartButton.addEventListener('click', closeModals);
+  }
+  
+  if (elements.checkoutButton) {
+    elements.checkoutButton.addEventListener('click', () => {
+      closeModals();
+      if (elements.checkoutModal) {
+        elements.checkoutModal.style.display = 'flex';
+      }
     });
+  }
+  
+  if (elements.closeCheckoutButton) {
+    elements.closeCheckoutButton.addEventListener('click', closeModals);
+  }
+  
+  if (elements.checkoutForm) {
+    elements.checkoutForm.addEventListener('submit', handleSubmit);
+  }
 
-    message += `\nИтого: ₽${cartItems.reduce((total, item) => total + item.price * item.quantity, 0).toFixed(2)}`;
-
-    // Отправляем данные в Telegram
-    tg.sendData(JSON.stringify({
-        message: message,
-        cartItems: cartItems,
-        name: name,
-        phone: phone
-    }));
-
-    // Закрываем форму
-    document.getElementById('checkout-modal').style.display = 'none';
-
-    // Очищаем корзину
-    cartItems = [];
-    updateCartUI();
+  // Восстановление корзины
+  cartItems = cartItems.filter(item => 
+    item?.name && !isNaN(item.price) && !isNaN(item.quantity)
+  );
+  updateCart();
+  
+  // Инициализация Telegram WebApp
+  if (tg) {
+    tg.ready();
+    tg.expand();
+  }
 });
