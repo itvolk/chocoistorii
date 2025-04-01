@@ -1,27 +1,29 @@
-# Используем базовый образ Python 3.9
 FROM python:3.9-slim
 
+# Запрещаем автоматический перезапуск
+STOPSIGNAL SIGINT
+
 # Устанавливаем системные зависимости
-RUN apt update && apt install -y gcc python3-dev
-
-#
-RUN pip install --upgrade pip
-
+RUN apt-get update && apt-get install -y \
+    gcc \
+    python3-dev \
+    libsqlite3-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 # Устанавливаем рабочую директорию
 WORKDIR /app
 
-# Копируем requirements.txt
+# Сначала копируем только requirements.txt
 COPY requirements.txt .
 
-# Очищаем кэш pip и устанавливаем зависимости
-RUN pip cache purge
-RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install aiogram
+# Устанавливаем зависимости (с очисткой кэша)
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
-# Копирование остальных файлов
+# Затем копируем остальные файлы
 COPY . .
 
-# Запуск бота
-CMD ["python", "telegram_bot.py"]
+# Создание директории для логов
+RUN mkdir -p /app/logs
 
+CMD ["python", "telegram_bot.py"]

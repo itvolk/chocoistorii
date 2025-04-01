@@ -1,59 +1,58 @@
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Интернет-магазин</title>
+    <title>Магазин шоколада</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-    <div class="container"> <!-- Контейнер для карточек товаров -->
-    <div class="product-card">
-        <img src="image/Корзинка\2.jpg" class="product-image" alt="Корзинка">
-        <h3>Корзинка</h3>
-        <p>Цена: <span class="price"> 700</span> ₽</p>
-        <button class="add-to-cart" onclick="addToCart(this)">В корзину</button>
+    <div class="container">
+        <div class="product-card" data-name="Корзинка" data-price="700.0">
+            <div class="gallery">
+                <img src="products/1.jpg" class="product-image" loading="lazy" alt="Корзинка">
+            </div>
+            <h3>Корзинка</h3>
+            <p class="price">700.0 ₽</p>
+            <button class="add-to-cart" onclick="addToCart(this)">В корзину</button>
+        </div>
+        <div class="product-card" data-name="Помада" data-price="150.0">
+            <div class="gallery">
+                <img src="products/2.jpg" class="product-image" loading="lazy" alt="Помада">
+            </div>
+            <h3>Помада</h3>
+            <p class="price">150.0 ₽</p>
+            <button class="add-to-cart" onclick="addToCart(this)">В корзину</button>
+        </div>
     </div>
-    
-    <div class="product-card">
-        <img src="image/Помада\1.jpg" class="product-image" alt="Помада">
-        <h3>Помада</h3>
-        <p>Цена: <span class="price"> 150</span> ₽</p>
-        <button class="add-to-cart" onclick="addToCart(this)">В корзину</button>
-    </div>
-    
-    </div>
-    <!-- Кнопка для открытия корзины -->
-    <button id="open-cart-button" class="cart-button">Корзина</button>
-
-    <!-- Модальное окно корзины -->
+    <!-- Модальные окна -->
     <div id="cart-modal" class="modal">
         <div class="modal-content">
             <span id="close-cart-button" class="close">&times;</span>
-            <h3>Корзина</h3>
+            <h3>Ваша корзина</h3>
             <div id="cart-items"></div>
-            <hr>
-            <p>Итого: <span id="total">0</span> ₽</p>
-            <button id="checkout-button" class="add-to-cart">Оформить заказ</button>
+            <div class="total">Итого: <span id="total">0</span> ₽</div>
+            <button id="checkout-button" class="Button">Оформить заказ</button>
         </div>
     </div>
 
-    <script src="script.js"></script>
-<!-- Форма ввода данных -->
     <div id="checkout-modal" class="modal">
         <div class="modal-content">
-            <span id="close-checkout-button" class="close">&times;</span>
+            <button id="close-checkout-button" class="close">&times;</button>
             <h3>Оформление заказа</h3>
             <form id="checkout-form">
-                <label for="name">Имя:</label>
-                <input type="text" id="name" name="name" required>
-                <label for="phone">Телефон:</label>
-                <input type="tel" id="phone" name="phone" required>
-                <button type="submit" class="add-to-cart">Отправить заказ</button>
+                <input type="text" id="name" placeholder="Имя" required>
+                <input type="tel" id="phone" placeholder="Телефон" required>
+                <button type="submit" class="Button">Отправить заказ</button>
             </form>
         </div>
     </div>
+
+    <button id="open-cart-button" class="cart-button">
+        🛒 Корзина
+        <span id="cart-counter" class="counter"></span>
+    </button>
+    <script src="script.js" defer></script>
 </body>
 </html>

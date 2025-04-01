@@ -25,6 +25,7 @@ const elements = {
   totalElement: getElement('total'),
   nameInput: getElement('name'),
   phoneInput: getElement('phone'),
+  commentInput: getElement('comment'),
   openCartButton: getElement('open-cart-button'),
   closeCartButton: getElement('close-cart-button'),
   checkoutButton: getElement('checkout-button'),
@@ -100,6 +101,7 @@ function updateCart() {
   localStorage.setItem('cart', JSON.stringify(cartItems));
   renderCart();
   updateCartButton();
+  updateCartLayout();
 }
 
 // Отрисовка корзины
@@ -123,9 +125,10 @@ function renderCart() {
           <button onclick="changeQuantity(${index}, -1)">-</button>
           <span>${item.quantity}</span>
           <button onclick="changeQuantity(${index}, 1)">+</button>
-          <button class="remove" onclick="removeFromCart(${index})">×</button>
+          
         </div>
         <span class="price">${(item.price * item.quantity).toFixed(2)} ₽</span>
+        <button class="remove" onclick="removeFromCart(${index})"> ❌</button>
       </div>
     `;
     elements.cartItems.insertAdjacentHTML('beforeend', itemHTML);
@@ -133,6 +136,12 @@ function renderCart() {
   });
 
   elements.totalElement.textContent = total.toFixed(2);
+  // Обновляем счетчик в кнопке корзины
+  const cartCounter = document.getElementById('cart-counter');
+  if (cartCounter) {
+    const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+    cartCounter.textContent = totalItems > 0 ? totalItems.toString() : '';
+  }
 }
 
 // Управление модальными окнами
@@ -165,6 +174,7 @@ function handleSubmit(e) {
 
   const name = elements.nameInput?.value.trim() || '';
   const phone = elements.phoneInput?.value.trim() || '';
+  const comment = elements.commentInput?.value.trim() || '';
   
   if (!name) {
     showAlert('✏️ Введите ваше имя!');
@@ -185,6 +195,7 @@ function handleSubmit(e) {
     })),
     name: name,
     phone: phone,
+    comment: comment,
     init_data: tg?.initDataUnsafe
   };
 
@@ -216,6 +227,24 @@ function handleSubmit(e) {
     console.error('Order submission error:', error);
     showAlert('❌ Ошибка при отправке заказа');
   }
+}
+
+// Функция для обновления состояния корзины
+function updateCartLayout() {
+    const body = document.body;
+    const cartContainer = document.querySelector('.cart-button-container');
+    const cartCounter = document.getElementById('cart-counter');
+    
+    // Проверяем, есть ли товары в корзине (примерная логика)
+    const hasItems = cartCounter && cartCounter.textContent && parseInt(cartCounter.textContent) > 0;
+    
+    if (hasItems) {
+        body.classList.add('has-cart-items');
+        cartContainer.classList.add('has-items');
+    } else {
+        body.classList.remove('has-cart-items');
+        cartContainer.classList.remove('has-items');
+    }
 }
 
 // Инициализация приложения

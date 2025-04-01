@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админ-панель</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link href="/admin/styles.css" rel="stylesheet">
+</head>
+<body>
+    <div id="admin-panel" style="display: none;">
+        <h1>Управление товарами</h1>
+        
+        <div class="product-form">
+            <h2>Добавить/изменить товар</h2>
+            <form id="product-form">
+                <!-- Добавьте этот скрытый input -->
+                <input type="hidden" id="product-id">
+                
+                <div class="form-group">
+                    <label for="product-name">Название:</label>
+                    <input type="text" id="product-name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="product-price">Цена:</label>
+                    <input type="number" id="product-price" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="product-description">Описание:</label>
+                    <textarea id="product-description"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Изображения товара</label>
+                    <div id="product-images-container" class="images-container">
+                        <!-- Превью изображений -->
+                    </div>
+                    <input type="file" id="image-upload" accept="image/*" multiple style="display: none;">
+                    <button type="button" onclick="document.getElementById('image-upload').click()">
+                        Выбрать фото
+                    </button>
+                    <button type="button" onclick="uploadImages()">
+                        Загрузить выбранные
+                    </button>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit">Сохранить товар</button>
+                    <button type="button" onclick="clearForm()">Очистить форму</button>
+                </div>
+            </form>
+        </div>
+        
+        <div class="product-list" id="product-list">
+            <h2>Список товаров</h2>
+            <div id="products-container"></div>
+        </div>
+    </div>
+
+    <div id="auth-error" style="display: none;">
+        <h1>Доступ запрещён</h1>
+        <p>Пожалуйста, используйте ссылку из Telegram бота для доступа к админ-панели.</p>
+        <button id="back-to-bot">Вернуться в бота</button>
+    </div>
+
+    <script src="/admin/script.js"></script>
+</body>
+</html>

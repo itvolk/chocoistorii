@@ -1,43 +1,28 @@
 # -*- coding: utf-8 -*-
-import os
+import sqlite3
 from html import escape
+import json
 
 def generate_html():
-    products_dir = 'products/'
-    products = []
+    # Подключаемся к базе данных
+    conn = sqlite3.connect('products.db')
+    cursor = conn.cursor()
     
-    for folder in os.listdir(products_dir):
-        folder_path = os.path.join(products_dir, folder)
-        if os.path.isdir(folder_path):
-            product = {
-                'name': escape(folder),
-                'price': '0',
-                'description': '',
-                'images': []
-            }
-            
-            # Чтение price.txt
-            price_path = os.path.join(folder_path, 'price.txt')
-            if os.path.exists(price_path):
-                with open(price_path, 'r') as f:
-                    product['price'] = f.read().strip()
-            
-            # Чтение description.txt
-            desc_path = os.path.join(folder_path, 'description.txt')
-            if os.path.exists(desc_path):
-                with open(desc_path, 'r', encoding='utf-8') as f:
-                    product['description'] = escape(f.read().strip())
-            
-            # Поиск изображений
-            images_dir = os.path.join(folder_path, 'images')
-            if os.path.isdir(images_dir):
-                product['images'] = [
-                    os.path.relpath(os.path.join(images_dir, f)) 
-                    for f in os.listdir(images_dir) 
-                    if f.lower().endswith(('.png', '.jpg', '.jpeg'))
-                ]
-            
-            products.append(product)
+    # Получаем все товары из базы
+    cursor.execute("SELECT name, price, description, images FROM products")
+    products_data = cursor.fetchall()
+    conn.close()
+
+    # Формируем список товаров
+    products = []
+    for name, price, description, images_json in products_data:
+        product = {
+            'name': escape(name),
+            'price': str(price),
+            'description': escape(description) if description else '',
+            'images': json.loads(images_json) if images_json else []
+        }
+        products.append(product)
 
     # Генерация HTML
     html = f'''<!DOCTYPE html>
@@ -46,10 +31,14 @@ def generate_html():
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Магазин шоколада</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <link rel="stylesheet" href="styles.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
+    <div class="main-content"> <!-- Новый оберточный div -->
     <div class="container">'''
 
     for product in products:
@@ -64,6 +53,7 @@ def generate_html():
         </div>'''
 
     html += '''
+    </div>
     </div>
     <!-- Модальные окна -->
     <div id="cart-modal" class="modal">
@@ -83,16 +73,18 @@ def generate_html():
             <form id="checkout-form">
                 <input type="text" id="name" placeholder="Имя" required>
                 <input type="tel" id="phone" placeholder="Телефон" required>
+                <textarea rows="5" type="comment" id="comment" placeholder="Комментарий к заказу"></textarea>
                 <button type="submit" class="Button">Отправить заказ</button>
             </form>
         </div>
     </div>
-
-    <button id="open-cart-button" class="cart-button">
-        🛒 Корзина
-        <span id="cart-counter" class="counter"></span>
-    </button>
-    <script src="script.js"></script>
+    <div class="cart-button-container">
+        <button id="open-cart-button" class="cart-button">
+            🛒 Корзина
+            <span id="cart-counter" class="counter"></span>
+        </button>
+    </div>
+    <script src="script.js" defer></script>
 </body>
 </html>'''
 
